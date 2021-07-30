@@ -1,14 +1,24 @@
+use dialog::DialogBox;
 use image::imageops::flip_vertical_in_place;
 use image::{GenericImageView, Pixel};
 use std::convert::TryInto;
 
 fn main() {
-    let args: Vec<_> = std::env::args().collect();
-    let mut input = image::open(
-        args.get(1)
-            .expect("Usage: cell-machine-art-generator filename"),
-    )
-    .unwrap();
+    let path = std::path::PathBuf::from(
+        dialog::FileSelection::new("Select image")
+            .mode(dialog::FileSelectionMode::Open)
+            .show()
+            .unwrap()
+            .unwrap(),
+    );
+    let dir = path
+        .canonicalize()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join(path.file_stem().unwrap());
+    let dir = dir.as_path();
+    let mut input = image::open(path).unwrap();
     flip_vertical_in_place(&mut input);
     let width = input.width();
     let height = input.height();
@@ -20,7 +30,6 @@ fn main() {
     let mut attrs = imagequant::new();
     attrs.set_speed(1).unwrap();
     attrs.set_max_colors(11).unwrap();
-    attrs.set_last_index_transparent()
     let mut image = attrs
         .new_image(
             input.as_ref(),
@@ -33,7 +42,7 @@ fn main() {
     result.set_dithering_level(1.0);
     let (palette, arr) = result.remapped(&mut image).unwrap();
     let mut colors = palette.iter();
-    std::fs::create_dir("art").unwrap();
+    std::fs::create_dir(dir).unwrap();
     for name in [
         "0.png",
         "BGDefault.png",
@@ -55,11 +64,18 @@ fn main() {
                 1,
                 image::Rgba::from_channels(color.r, color.g, color.b, color.a),
             )
-            .save("art/".to_owned() + name)
+            .save(dir.join(name))
             .unwrap()
         }
     }
-    println!("{}", encode_v3_code(width, height, arr))
+    std::fs::write(dir.join("level.txt"), encode_v3_code(width, height, arr)).unwrap();
+    dialog::Message::new(format!(
+        "Your image was successfully converted!\
+         The texture pack and the level code is available at: {}",
+        dir.display()
+    ))
+    .show()
+    .unwrap();
 }
 
 fn encode_v3_code(mut width: u32, mut height: u32, data: Vec<u8>) -> String {
