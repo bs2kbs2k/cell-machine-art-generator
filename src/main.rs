@@ -1,13 +1,18 @@
-use dialog::DialogBox;
 use image::imageops::flip_vertical_in_place;
 use image::{GenericImageView, Pixel};
 use std::convert::TryInto;
 
 fn main() {
     let path = std::path::PathBuf::from(
-        dialog::FileSelection::new("Select image")
-            .mode(dialog::FileSelectionMode::Open)
-            .show()
+        native_dialog::FileDialog::new()
+            .add_filter(
+                "Image files",
+                &[
+                    "png", "jpg", "jpeg", "gif", "bmp", "ico", "tiff", "tif", "webp", "avif",
+                    "pnm", "pam", "pbm", "pgm", "ppm", "dds", "tga", "exr", "farbfeld",
+                ],
+            )
+            .show_open_single_file()
             .unwrap()
             .unwrap(),
     );
@@ -69,13 +74,14 @@ fn main() {
         }
     }
     std::fs::write(dir.join("level.txt"), encode_v3_code(width, height, arr)).unwrap();
-    dialog::Message::new(format!(
-        "Your image was successfully converted!\
+    native_dialog::MessageDialog::new()
+        .set_text(&*format!(
+            "Your image was successfully converted!\
          The texture pack and the level code is available at: {}",
-        dir.display()
-    ))
-    .show()
-    .unwrap();
+            dir.display()
+        ))
+        .show_alert()
+        .unwrap();
 }
 
 fn encode_v3_code(mut width: u32, mut height: u32, data: Vec<u8>) -> String {
