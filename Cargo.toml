@@ -14,3 +14,8 @@ anyhow = "1.0.42"
 image = "0.23.14"
 imagequant = "3.0.3"
 native-dialog = "0.5.5"
+
+[profile.release]
+lto = "fat"
+panic = "abort"
+debug = 0
